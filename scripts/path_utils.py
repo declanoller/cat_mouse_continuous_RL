@@ -15,7 +15,19 @@ already been called and dirs added to the system path.
 ROOT_DIR = os.path.join(os.path.dirname(__file__), '../')
 SRC_DIR = os.path.join(ROOT_DIR, 'src')
 MISC_DIR = os.path.join(ROOT_DIR, 'misc')
+BASE_OUTPUT_DIR = os.path.join(ROOT_DIR, 'output')
 OUTPUT_DIR = os.path.join(ROOT_DIR, 'output/misc_runs')
+
+if not os.path.exists(BASE_OUTPUT_DIR):
+    print('\nBase output dir {BASE_OUTPUT_DIR} does not exist yet, creating...')
+    os.mkdir(BASE_OUTPUT_DIR)
+    print('Done!\n\n')
+
+if not os.path.exists(OUTPUT_DIR):
+    print('\nOutput dir {OUTPUT_DIR} does not exist yet, creating...')
+    os.mkdir(OUTPUT_DIR)
+    print('Done!\n\n')
+
 
 sys.path.append(ROOT_DIR)
 sys.path.append(SRC_DIR)
