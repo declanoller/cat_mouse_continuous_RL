@@ -3,7 +3,6 @@ import path_utils
 
 from CatMouse_A2C import CatMouse_A2C
 import aux_functions
-import RunTools as rt
 
 
 center_dict = {
@@ -27,7 +26,7 @@ vary_dict = {
 }
 
 
-rt.hyperparam_search_const(
+aux_functions.hyperparam_search_const(
 								aux_functions.run_train_sequence,
 								center_dict,
 								vary_dict,

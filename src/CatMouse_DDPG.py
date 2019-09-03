@@ -1,3 +1,6 @@
+# Import first
+import path_utils
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -8,10 +11,6 @@ import torch.optim as optim
 from torch.distributions import Categorical, Normal
 from torch.nn.functional import softplus, relu6
 
-# system path stuff
-import decorators
-import RunTools as rt
-
 # generic packages
 import os, json, random, shutil
 import traceback as tb
@@ -20,7 +19,7 @@ from copy import deepcopy
 # Ones specific to this project
 from CatMouseAgent import CatMouseAgent
 from OrnsteinUhlenbeckNoise import OrnsteinUhlenbeckNoise
-import plot_tools, path_utils
+import plot_tools
 
 
 '''
@@ -39,7 +38,7 @@ default_kwargs = {
 	'clamp_grad' : 10000.0,
 	'hidden_size' : 200,
 	'init_weights' : True,
-	'base_dir' : 'misc_runs',
+	'base_dir' : path_utils.get_output_dir(),
 	'noise_sigma' : 0.2,
 	'noise_theta' : 0.15,
 	'noise_dt' : 10**-2,
@@ -48,7 +47,7 @@ default_kwargs = {
 	'max_buffer_size' : 10**6,
 	'ER_batch_size' : 64,
 	'tau' : 0.001,
-	'decay_noise' : False,
+	'decay_noise' : True,
 	'noise_method' : 'OU'
 }
 
@@ -215,7 +214,7 @@ class CatMouse_DDPG:
 			l_target.bias.data = (1 - self.tau)*l_target.bias.data + self.tau*l.bias.data
 
 
-	@decorators.timer
+	@path_utils.timer
 	def train(self, N_eps, N_steps, **kwargs):
 		'''
 		plot_train() plots:
@@ -763,7 +762,7 @@ class CatMouse_DDPG:
 		ax_R.set_xlabel('Episode')
 		ax_R.set_ylabel('R')
 		ax_R.plot(self.R_train_hist, color='dodgerblue', alpha=0.5)
-		ax_R.plot(*rt.smooth_data(self.R_train_hist), color='black')
+		ax_R.plot(*plot_tools.smooth_data(self.R_train_hist), color='black')
 
 		ax_Q_loss.set_xlabel('Batch')
 		ax_Q_loss.set_ylabel('Q loss')

@@ -1,3 +1,6 @@
+# Import first
+import path_utils
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -7,10 +10,6 @@ from torch import nn
 import torch.optim as optim
 from torch.distributions import Categorical, Normal
 from torch.nn.functional import softplus, relu6
-
-# system path stuff
-import decorators
-import RunTools as rt
 
 # generic packages
 import os, json, random
@@ -45,7 +44,7 @@ default_kwargs = {
 	'LR' : 2*10**-4,
 	'clamp_grad' : 10000.0,
 	'hidden_size' : 200,
-	'base_dir' : 'misc_runs',
+	'base_dir' : path_utils.get_output_dir(),
 	'decay_noise' : True,
 	'noise_sigma' : 0.2,
 	'noise_theta' : 0.1,
@@ -139,7 +138,7 @@ class CatMouse_A2C:
 			self.optimizer = optim.RMSprop(self.NN.parameters(), lr=self.LR)
 
 
-	@decorators.timer
+	@path_utils.timer
 	def train(self, N_eps, N_steps, **kwargs):
 		'''
 		plot_train() plots:
@@ -641,7 +640,7 @@ class CatMouse_A2C:
 		ax_R.set_xlabel('Episode')
 		ax_R.set_ylabel('R')
 		ax_R.plot(self.R_train_hist, color='dodgerblue', alpha=0.5)
-		ax_R.plot(*rt.smooth_data(self.R_train_hist), color='black')
+		ax_R.plot(*plot_tools.smooth_data(self.R_train_hist), color='black')
 
 		ax_V_loss.set_xlabel('Batch')
 		ax_V_loss.set_ylabel('V loss')

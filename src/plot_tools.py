@@ -1,8 +1,7 @@
-
+import path_utils
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
-import path_utils
 import os, subprocess, json, shutil, glob
 
 
@@ -279,6 +278,33 @@ def imgs_to_gif(imgs_dir, output_fname, **kwargs):
 	subprocess.check_call(check_call_arglist)
 	print('done.')
 	return output_fname
+
+
+
+
+
+def smooth_data(in_dat):
+
+	'''
+	Useful for smoothing data, when you have a ton of points and want fewer,
+	or when it's really noisy and you want to see the general trend.
+
+	Expects in_dat to just be a long list of values. Returns a tuple of
+	the downsampled x and y, where the x are the indices of the y values,
+	so you can easily plot the smoothed version on top of the original.
+	'''
+
+	hist = np.array(in_dat)
+	N_avg_pts = min(100, len(hist)) #How many points you'll have in the end.
+
+	avg_period = max(1, len(hist) // max(1, N_avg_pts))
+
+	downsampled_x = avg_period*np.array(range(N_avg_pts))
+	hist_downsampled_mean = np.array([hist[i*avg_period:(i+1)*avg_period].mean() for i in range(N_avg_pts)])
+	return downsampled_x, hist_downsampled_mean
+
+
+
 
 
 #
