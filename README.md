@@ -78,14 +78,14 @@ vary_dict = {
 }
 
 aux_functions.hyperparam_search_const(
-								aux_functions.run_train_sequence,
-								center_dict,
-								vary_dict,
-								path_utils.get_output_dir(),
-								N_runs=5,
-								save_R = True,
-								center_run = True
-							)
+			aux_functions.run_train_sequence,
+			center_dict,
+			vary_dict,
+			path_utils.get_output_dir(),
+			N_runs=5,
+			save_R = True,
+			center_run = True
+		)
 ```
 
 This will use `center_dict` as the "baseline" parameters to run, but then change the value of the parameters in `vary_dict` one at a time. For each set of parameters, it'll run `N_runs` times (in this case, 5). It will also create a big dir that will hold all the dirs for the individual runs, and their results, and then plot the identical ones together, so you can more easily compare them.
