@@ -5,11 +5,12 @@ from CatMouse_A2C import CatMouse_A2C
 import aux_functions
 import RunTools as rt
 
+
 center_dict = {
 	'train_class' : CatMouse_A2C,
-	'init_weights' : True,
-	'N_eps' : 3000,
-	'N_steps' : 500,
+	'N_eps' : 20000,
+	'N_steps' : 100,
+	'max_ep_steps' : 100,
 	'gamma' : 0.99,
 	'LR' : 2*10**-4,
 	'N_batch' : 5,
@@ -17,12 +18,12 @@ center_dict = {
 	'beta_entropy' : 10**-5,
 	'sigma_min' : 10**-5,
 	'clamp_grad' : 10,
-	'cat_speed_rel' : 3.0,
-	'noise_sigma' : 0.8
+	'cat_speed_rel' : 3.2,
+	'noise_sigma' : 0.5
 }
 
 vary_dict = {
-
+	'cat_speed_rel' : [3.3, 3.4]
 }
 
 
@@ -31,15 +32,12 @@ rt.hyperparam_search_const(
 								center_dict,
 								vary_dict,
 								path_utils.get_output_dir(),
-								N_runs=3,
+								N_runs=5,
 								save_R = True,
 								center_run = True
 							)
 
-
 exit()
-
-
 
 
 

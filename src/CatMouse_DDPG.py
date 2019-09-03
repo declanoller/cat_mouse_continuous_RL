@@ -14,15 +14,14 @@ import RunTools as rt
 import FileSystemTools as fst
 
 # generic packages
-import os, json, random
+import os, json, random, shutil
 import traceback as tb
 from copy import deepcopy
 
 # Ones specific to this project
 from CatMouseAgent import CatMouseAgent
-from GymAgent import GymAgent
 from OrnsteinUhlenbeckNoise import OrnsteinUhlenbeckNoise
-import plot_tools
+import plot_tools, path_utils
 
 
 '''
@@ -45,10 +44,13 @@ default_kwargs = {
 	'noise_sigma' : 0.2,
 	'noise_theta' : 0.15,
 	'noise_dt' : 10**-2,
+	'noise_mu' : 'zero',
+	'noise_decay_limit' : 10**-3,
 	'max_buffer_size' : 10**6,
 	'ER_batch_size' : 64,
 	'tau' : 0.001,
-	'decay_noise' : False
+	'decay_noise' : False,
+	'noise_method' : 'OU'
 }
 
 class CatMouse_DDPG:
@@ -71,9 +73,12 @@ class CatMouse_DDPG:
 
 		self.fname_base = 'CatMouse_DDPG_' + fst.getDateString()
 
-		self.dir = os.path.join(default_kwargs['base_dir'], self.fname_base)
-		os.mkdir(self.dir)
-		print(f'\n\nMade dir {self.dir} for run...\n\n')
+		if kwargs.get('dir', None) is None:
+			self.dir = os.path.join(default_kwargs['base_dir'], self.fname_base)
+			os.mkdir(self.dir)
+			print(f'\n\nMade dir {self.dir} for run...\n\n')
+		else:
+			self.dir = kwargs.get('dir', None)
 
 		self.save_params_json(kwargs, 'params_passed')
 		self.save_params_json(default_kwargs, 'params_all')
@@ -88,10 +93,13 @@ class CatMouse_DDPG:
 		self.noise_sigma = default_kwargs['noise_sigma']
 		self.noise_theta = default_kwargs['noise_theta']
 		self.noise_dt = default_kwargs['noise_dt']
+		self.noise_mu = default_kwargs['noise_mu']
+		self.noise_decay_limit = default_kwargs['noise_decay_limit']
 		self.max_buffer_size = default_kwargs['max_buffer_size']
 		self.ER_batch_size = default_kwargs['ER_batch_size']
 		self.tau = default_kwargs['tau']
 		self.decay_noise = default_kwargs['decay_noise']
+		self.noise_method = default_kwargs['noise_method']
 
 
 		self.setup_NN()
@@ -155,6 +163,43 @@ class CatMouse_DDPG:
 			l.bias.requires_grad = False
 
 
+
+	def save_model(self, **kwargs):
+
+		model_save_dir = os.path.join(self.dir, 'saved_models')
+
+		if os.path.exists(model_save_dir):
+			shutil.rmtree(model_save_dir)
+
+		os.mkdir(model_save_dir)
+
+		NN_dict = {
+			'NN_actor' : self.NN_actor,
+			'NN_actor_target' : self.NN_actor_target,
+			'NN_critic' : self.NN_critic,
+			'NN_critic_target' : self.NN_critic_target
+		}
+		for name, NN in NN_dict.items():
+			fname = os.path.join(model_save_dir, f'{name}.model')
+			torch.save(NN.state_dict(), fname)
+
+
+	def load_model(self):
+
+		model_save_dir = os.path.join(self.dir, 'saved_models')
+		assert os.path.exists(model_save_dir), 'model dir must exist!'
+
+		NN_dict = {
+			'NN_actor' : self.NN_actor,
+			'NN_actor_target' : self.NN_actor_target,
+			'NN_critic' : self.NN_critic,
+			'NN_critic_target' : self.NN_critic_target
+		}
+		for name, NN in NN_dict.items():
+			fname = os.path.join(model_save_dir, f'{name}.model')
+			NN.load_state_dict(torch.load(fname))
+
+
 	def update_target_NN(self):
 
 		'''
@@ -190,6 +235,7 @@ class CatMouse_DDPG:
 			self.H_loss_batches = []
 			self.noise_sigma_hist = []
 			self.tot_loss_batches = []
+			self.episode_ending = None
 
 			self.R_train_hist = []
 
@@ -201,7 +247,7 @@ class CatMouse_DDPG:
 
 		self.train_epochs.append(self.total_step)
 
-		self.decay_noise_factor = (10**-3)**(1.0/N_eps)
+		self.decay_noise_factor = (self.noise_decay_limit)**(1.0/N_eps)
 
 		for ep in range(N_eps):
 			self.episode(N_steps)
@@ -217,13 +263,14 @@ class CatMouse_DDPG:
 				R_avg = 0.99*R_avg + 0.01*R_tot
 
 			if ep % max(N_eps // 100, 1) == 0:
-				self.plot_episode(show_plot=False, save_plot=True, iter=self.total_step)
-				self.plot_VF(show_plot=False, save_plot=True, iter=self.total_step)
-				self.plot_policy(show_plot=False, save_plot=True, iter=self.total_step)
+				#self.plot_episode(show_plot=False, save_plot=True, iter=self.total_step)
+				#self.plot_VF(show_plot=False, save_plot=True, iter=self.total_step)
+				#self.plot_policy(show_plot=False, save_plot=True, iter=self.total_step)
 				#self.plot_trajectory(show_plot=False, save_plot=True, iter=self.total_step)
 				plot_tools.save_traj_to_file(self.last_ep_state_hist,
 												self.dir, iter=self.total_step,
-												cat_speed_rel=self.agent.cat_speed_rel)
+												cat_speed_rel=self.agent.cat_speed_rel,
+												mouse_caught=self.episode_ending)
 				print('\nepisode {}/{}'.format(ep, N_eps))
 				#print(f'ER buffer length = {self.ER.buf_len}')
 				print(f'Episode R_tot = {R_tot:.4f}\t avg reward = {R_avg:.3f}')
@@ -263,20 +310,31 @@ class CatMouse_DDPG:
 		a_ep_hist = []
 		R_ep_hist = []
 		noise_ep_hist = []
+		self.episode_ending = None
 
-		OU_noise = OrnsteinUhlenbeckNoise(np.array([0,0]),
-												sigma=self.noise_sigma,
-												theta=self.noise_theta,
-												dt=self.noise_dt)
+		if self.noise_mu == 'zero':
+			OU_noise = OrnsteinUhlenbeckNoise(np.array([0,0]),
+													sigma=self.noise_sigma,
+													theta=self.noise_theta,
+													dt=self.noise_dt)
+		else:
+			OU_noise = OrnsteinUhlenbeckNoise(np.random.randn(2),
+													sigma=self.noise_sigma,
+													theta=self.noise_theta,
+													dt=self.noise_dt)
 
 		for t in range(N_steps):
 
 			# DDPG stuff
 			s = self.agent.getStateVec()
 
-			# Get action from actor NN
-			noise = OU_noise() # add noise?
+			if self.noise_method == 'OU':
+				noise = OU_noise() # add noise?
+			else:
+				noise = self.noise_sigma*np.random.randn(2)
 
+
+			# Get action from actor NN
 			a = self.NN_actor.forward(torch.tensor(s, dtype=torch.float)).detach().numpy() + noise
 
 			# Iterate, get r, s_next
@@ -339,6 +397,13 @@ class CatMouse_DDPG:
 				break
 
 
+		last_r = R_ep_hist[-1]
+		if last_r > 0.5:
+			self.episode_ending = 'escaped'
+		elif last_r < -0.2:
+			self.episode_ending = 'caught'
+		else:
+			self.episode_ending = None
 
 		self.R_train_hist.append(sum(R_ep_hist))
 
@@ -346,6 +411,75 @@ class CatMouse_DDPG:
 		self.last_ep_state_hist = np.array(s_ep_hist)
 		self.last_ep_action_hist = np.array(a_ep_hist)
 		self.last_ep_noise_hist = np.array(noise_ep_hist)
+
+
+	def no_train_episode(self, N_steps):
+
+		self.agent.initEpisode()
+
+		'''
+
+		The GD is done with:
+			-v_buffer (batch of V for each state)
+			-sigma_buffer (batch of sd for each state)
+			-r_buffer (batch of returned r for each action taken in each state)
+			-pi_a_buffer (batch of pi_a for each action taken in each state)
+
+		plot_episode() plots:
+			-self.last_ep_*_hist (history of * over course of episode)
+
+		other buffers saved but not used (for debugging):
+			-s_buffer
+			-a_buffer
+			-mu_buffer
+
+		'''
+
+
+		s_ep_hist = []
+		R_ep_hist = []
+		episode_ending = None
+		tot_steps = 0
+
+		for t in range(N_steps):
+
+			# DDPG stuff
+			s = self.agent.getStateVec()
+
+			# Get action from actor NN
+			a = self.NN_actor.forward(torch.tensor(s, dtype=torch.float)).detach().numpy()
+
+			# Iterate, get r, s_next
+			r, s_next, done = self.agent.iterate(a)
+
+			s_ep_hist.append(s)
+			R_ep_hist.append(r)
+
+			tot_steps = t
+			if done:
+				s_ep_hist.append(s_next)
+				break
+
+
+		last_r = R_ep_hist[-1]
+		if last_r > 0.5:
+			episode_ending = 'escaped'
+		elif last_r < -0.2:
+			episode_ending = 'caught'
+		else:
+			episode_ending = None
+
+		traj_fname = plot_tools.save_traj_to_file(np.array(s_ep_hist),
+										self.dir, iter='eval_ep_{}'.format(path_utils.get_date_str()),
+										cat_speed_rel=self.agent.cat_speed_rel,
+										mouse_caught=episode_ending)
+
+
+		return {
+				'traj_fname': traj_fname,
+				'mouse_caught' : episode_ending,
+				'tot_steps' : tot_steps
+			}
 
 
 	################################# Plotting functions

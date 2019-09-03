@@ -19,12 +19,12 @@ BASE_OUTPUT_DIR = os.path.join(ROOT_DIR, 'output')
 OUTPUT_DIR = os.path.join(ROOT_DIR, 'output/misc_runs')
 
 if not os.path.exists(BASE_OUTPUT_DIR):
-    print('\nBase output dir {BASE_OUTPUT_DIR} does not exist yet, creating...')
+    print(f'\nBase output dir {BASE_OUTPUT_DIR} does not exist yet, creating...')
     os.mkdir(BASE_OUTPUT_DIR)
     print('Done!\n\n')
 
 if not os.path.exists(OUTPUT_DIR):
-    print('\nOutput dir {OUTPUT_DIR} does not exist yet, creating...')
+    print(f'\nOutput dir {OUTPUT_DIR} does not exist yet, creating...')
     os.mkdir(OUTPUT_DIR)
     print('Done!\n\n')
 
@@ -60,7 +60,7 @@ def timer(func):
 def get_date_str():
     # Returns the date and time for labeling output.
     # -4 to only take two second decimal places.
-	return datetime.now().strftime('%d-%m-%Y_%H-%M-%S.%f')[:-4]
+	return datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
 
 
 def dict_to_str_list(dict):

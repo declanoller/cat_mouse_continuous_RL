@@ -20,8 +20,8 @@ from copy import deepcopy
 
 # Ones specific to this project
 from CatMouseAgent import CatMouseAgent
-from GymAgent import GymAgent
 from OrnsteinUhlenbeckNoise import OrnsteinUhlenbeckNoise
+import plot_tools
 
 '''
 
@@ -39,8 +39,6 @@ This is pretty similar to A2C.
 
 
 default_kwargs = {
-	'N_state_terms' : 0,
-	'N_actions' : 0,
 	'N_batch' : 5,
 	'gamma' : 0.99,
 	'beta_entropy' : 0.005,
@@ -164,6 +162,7 @@ class CatMouse_A2C:
 		self.noise_sigma_hist = []
 		self.batch_saves = {}
 		self.global_step = 0
+		self.total_step = 0
 
 		R_avg = 0
 
@@ -186,15 +185,22 @@ class CatMouse_A2C:
 				R_avg = 0.99*R_avg + 0.01*R_tot
 
 			if ep % max(N_eps // 100, 1) == 0:
-				self.plot_episode(show_plot=False, save_plot=True, iter=ep)
+				plot_tools.save_traj_to_file(self.last_ep_state_hist,
+												self.dir, iter=self.total_step,
+												cat_speed_rel=self.agent.cat_speed_rel)
+				#self.plot_episode(show_plot=False, save_plot=True, iter=ep)
 				#self.plot_VF(show_plot=False, save_plot=True, iter=ep)
-				self.plot_trajectory(show_plot=False, save_plot=True, iter=ep)
+				#self.plot_trajectory(show_plot=False, save_plot=True, iter=ep)
 				print('\nepisode {}/{}'.format(ep, N_eps))
 				print(f'Episode R_tot = {R_tot:.4f}\t avg reward = {R_avg:.1f}')
 
-			if ep % max(N_eps // 100, 1) == 0:
+			if ep % max(N_eps // 1000, 1) == 0:
 					self.plot_train(save_plot=True, show_plot=False)
 
+			self.total_step += 1
+
+		# Do it at the end again, just to have a last one
+		self.plot_train(save_plot=True, show_plot=False)
 
 
 	def episode(self, N_steps):
@@ -324,7 +330,7 @@ class CatMouse_A2C:
 					total_norm += param_norm.item() ** 2.0
 
 				total_norm = total_norm ** (1. / 2.0)
-				self.save_dat_append('grad_norm', np.array([total_norm]))
+				#self.save_dat_append('grad_norm', np.array([total_norm]))
 
 				if total_norm > grad_norm_thresh:
 					print(f'Grad norm ({total_norm:.2f} above threshold ({grad_norm_thresh}))')
@@ -814,7 +820,7 @@ class AC_NN(nn.Module):
 
 		z = relu6(self.actor_lin1(x))
 		mu = self.mu(z)
-		mu = torch.tanh(mu)
+		mu = 3*torch.tanh(mu)
 
 		sigma = softplus(self.sigma(z)) + self.sigma_min
 		return(v, (mu, sigma))

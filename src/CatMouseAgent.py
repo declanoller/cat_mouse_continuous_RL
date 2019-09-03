@@ -24,8 +24,7 @@ class CatMouseAgent:
         self.mouse_pos = np.array([0.0, 0.0])
         self.iter_counter = 0
 
-        self.mouse_speed_rad_div = 5.0
-        self.mouse_speed = self.circle_rad/self.mouse_speed_rad_div
+        self.set_mouse_speed_rad_div(5.0)
 
         self.set_cat_speed(kwargs.get('cat_speed_rel', 3.0))
 
@@ -35,6 +34,13 @@ class CatMouseAgent:
         self.escape_reward = 1.0
         self.caught_penalty = -0.5
         self.time_penalty = -1.0/self.max_ep_steps
+
+
+    def set_mouse_speed_rad_div(self, mouse_speed_rad_div):
+
+        self.mouse_speed_rad_div = mouse_speed_rad_div
+        self.mouse_speed = self.circle_rad/self.mouse_speed_rad_div
+
 
 
     def set_cat_speed(self, cat_speed_rel):
@@ -86,6 +92,24 @@ class CatMouseAgent:
             else:
                 #print('Mouse escaped!')
                 reward = self.escape_reward
+
+                cat_mouse_angle_diff = np.abs(self.cat_angle - mouse_angle)
+
+                if min(cat_mouse_angle_diff, 2*pi - cat_mouse_angle_diff) <= self.cat_angle_d:
+                    self.cat_angle = mouse_angle
+
+                else:
+                    # This makes the cat go in the direction that gets it as close to the mouse as possible.
+                    angle_diff_L = np.abs((self.cat_angle - self.cat_angle_d) - mouse_angle)
+                    angle_diff_L = min(angle_diff_L, 2*pi - angle_diff_L)
+
+                    angle_diff_R = np.abs((self.cat_angle + self.cat_angle_d) - mouse_angle)
+                    angle_diff_R = min(angle_diff_R, 2*pi - angle_diff_R)
+
+                    if angle_diff_L < angle_diff_R:
+                        self.cat_angle = (self.cat_angle - self.cat_angle_d)%(2*pi)
+                    else:
+                        self.cat_angle = (self.cat_angle + self.cat_angle_d)%(2*pi)
 
         else:
             # This is if you're still in the circle but haven't escaped.

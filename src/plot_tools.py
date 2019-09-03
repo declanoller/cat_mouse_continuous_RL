@@ -42,6 +42,8 @@ def save_traj_to_file(traj, dir, **kwargs):
 	with open(fname, 'w+') as f:
 		json.dump(traj_dict, f, indent=4)
 
+	return fname
+
 
 
 
@@ -127,9 +129,10 @@ def plot_traj(traj_array, output_fname, **kwargs):
 
 	# Draw mouse
 	ax.imshow(im_mouse,
-			extent=(mouse_pos[-1,0] - mouse_w, mouse_pos[-1,0] + mouse_w, mouse_pos[-1,1] - mouse_h, mouse_pos[-1,1] + mouse_h),
+			extent=(mouse_pos[-1,0] - 1.3*mouse_w, mouse_pos[-1,0] + 0.7*mouse_w, mouse_pos[-1,1] - mouse_h, mouse_pos[-1,1] + mouse_h),
 			zorder=10)
-
+	#plt.scatter(mouse_pos[-1,0], mouse_pos[-1,1], s=60, edgecolor='black', linewidth=2.5, marker='o', facecolors='black')
+	#print(mouse_pos[-1,0], mouse_pos[-1,1])
 
 	# All positions
 	plt.scatter(cat_pos_x, cat_pos_y, s=200, edgecolor='black', linewidth=0.2, marker='o', facecolors='None')
@@ -175,14 +178,14 @@ def plot_traj(traj_array, output_fname, **kwargs):
 	# Add title if mouse escaped or was caught
 	mouse_caught = kwargs.get('mouse_caught', None)
 	if mouse_caught is not None:
-		if mouse_caught:
+		if mouse_caught == 'caught':
 			plt.title('Caught!', fontsize=20)
-		else:
+		elif mouse_caught == 'escaped':
 			plt.title('Escaped!', fontsize=20)
 
 	#plt.tight_layout()
 	# makes it tight right now, but no space for the title...
-	plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+	plt.subplots_adjust(left=0, right=1, top=0.9, bottom=0)
 	#plt.show()
 	plt.savefig(output_fname)
 
@@ -220,14 +223,18 @@ def make_traj_gif(traj_file, **kwargs):
 						traj_dict['cat_pos_y']), axis=1)
 
 	# Iterate through the whole trajectory
-	for i in range(1, len(full_traj)):
+	for i in range(1, len(full_traj)+1):
 
 		partial_traj = full_traj[:i]
 		fname = os.path.join(traj_gif_dir, f'{i}.png')
 
-		plot_traj(partial_traj, fname,
-						cat_speed_rel=traj_dict['cat_speed_rel'],
-						mouse_caught=traj_dict['mouse_caught'])
+		if i == len(full_traj):
+			plot_traj(partial_traj, fname,
+							cat_speed_rel=traj_dict['cat_speed_rel'],
+							mouse_caught=traj_dict['mouse_caught'])
+		else:
+			plot_traj(partial_traj, fname,
+							cat_speed_rel=traj_dict['cat_speed_rel'])
 
 		if kwargs.get('sustain_last_frame', True):
 			# Duplicates the last frame 5 times, makes a better gif

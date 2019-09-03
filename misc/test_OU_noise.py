@@ -20,13 +20,18 @@ class OrnsteinUhlenbeckActionNoise():
 
 
 
-noise = OrnsteinUhlenbeckActionNoise(np.array([0]), sigma=0.01, theta=.1, dt=0.01)
+OU_noise = OrnsteinUhlenbeckActionNoise(np.array([0]), sigma=0.1, theta=.01, dt=0.01)
 
-for n in range(5):
-    n_list = []
-    [n_list.append(noise()) for i in range(200)]
+fig, axes = plt.subplots(1, 2, figsize=(12,6))
 
-    plt.plot(n_list)
+N_pts = 2000
+for n in range(3):
+    noise = np.array([OU_noise() for i in range(N_pts)])
+    path = np.cumsum(noise)
+    axes[0].plot(noise)
+    axes[1].plot(path)
+
+#plt.savefig('OU_noise_ex.png')
 plt.show()
 
 
