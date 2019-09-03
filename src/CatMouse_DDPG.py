@@ -11,7 +11,6 @@ from torch.nn.functional import softplus, relu6
 # system path stuff
 import decorators
 import RunTools as rt
-import FileSystemTools as fst
 
 # generic packages
 import os, json, random, shutil
@@ -71,7 +70,7 @@ class CatMouse_DDPG:
 				#assert k in default_kwargs.keys(), 'key error'
 				print(f'Passed parameter {k} not in default_kwargs dict! Check')
 
-		self.fname_base = 'CatMouse_DDPG_' + fst.getDateString()
+		self.fname_base = 'CatMouse_DDPG_' + path_utils.get_date_str()
 
 		if kwargs.get('dir', None) is None:
 			self.dir = os.path.join(default_kwargs['base_dir'], self.fname_base)
@@ -109,7 +108,7 @@ class CatMouse_DDPG:
 		if 'base_dir' in default_kwargs.keys():
 			no_base_dir_kwargs = deepcopy(default_kwargs)
 			del no_base_dir_kwargs['base_dir'] # To get rid of this for the center dict
-		self.train_plot_title = fst.linebreak_every_n_spaces(fst.paramDictToLabelStr(no_base_dir_kwargs))
+		self.train_plot_title = path_utils.linebreak_every_n_spaces(path_utils.param_dict_to_label_str(no_base_dir_kwargs))
 
 
 		self.ER = ExpReplay(self.max_buffer_size, self.ER_batch_size)
